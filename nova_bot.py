@@ -7,7 +7,6 @@ from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filte
 from gpt_utils import ask_nova
 from fred_utils import obtener_dato_macro
 
-# Diccionario meses
 MESES = {
     "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
     "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
@@ -35,28 +34,30 @@ def extraer_fecha(texto):
             return f"{anio}-{mes_num}-01"
     return None
 
+def tiene_palabra_clave(texto):
+    claves = ["inflacion", "cpi", "pib", "desempleo", "tasa", "interes", "fedfunds", "m2", "pce"]
+    return any(p in normalize(texto) for p in claves)
+
 async def manejar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = update.message.text
     normalizado = normalize(texto)
 
-    # Detectar intenciones macroeconómicas
-    claves = ["inflacion", "cpi", "pib", "desempleo", "tasa", "interes", "m2", "pce"]
-    if any(k in normalizado for k in claves):
-        respuesta = obtener_dato_macro(texto)
-        await update.message.reply_text(respuesta)
-        return
-
-    # Si solo preguntan "qué día es hoy"
+    # Pregunta de fecha
     if "que dia es hoy" in normalizado or "fecha de hoy" in normalizado:
         hoy = datetime.now().strftime("%A, %d de %B de %Y")
         await update.message.reply_text(f"Hoy es {hoy}.")
         return
 
-    # GPT Libre (sin detección clara)
+    # Intención macroeconómica (usa FRED)
+    if tiene_palabra_clave(normalizado):
+        respuesta = obtener_dato_macro(texto)
+        await update.message.reply_text(respuesta)
+        return
+
+    # GPT libre
     respuesta = ask_nova([{"role": "user", "content": texto}])
     await update.message.reply_text(respuesta)
 
-# Inicializar bot
 if __name__ == '__main__':
     app = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar))
