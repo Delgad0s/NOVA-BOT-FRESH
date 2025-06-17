@@ -22,8 +22,6 @@ def obtener_inflacion_humana():
     inflacion_mensual = round(((cpi_actual - cpi_anterior) / cpi_anterior) * 100, 2)
     inflacion_anual = round(((cpi_actual - cpi_anio_pasado) / cpi_anio_pasado) * 100, 2)
 
-    return f"""
-📊 El último dato del CPI fue en {mes_texto} {anio}.
-📈 Inflación mensual: {inflacion_mensual}%
-📉 Inflación interanual: {inflacion_anual}%
-"""
+    return f"""📊 El último dato del CPI fue en {mes_texto} {anio}.
+📈 Inflación mensual: {inflacion_mensual}%  
+📉 Inflación interanual: {inflacion_anual}%"""
