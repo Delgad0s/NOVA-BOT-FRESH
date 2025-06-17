@@ -1,27 +1,92 @@
+import requests
 import os
-from dotenv import load_dotenv
-from fredapi import Fred
 from datetime import datetime
-import calendar
+from dateutil import parser
 
-load_dotenv()
-fred = Fred(api_key=os.getenv("FRED_API_KEY"))
+FRED_API_KEY = os.getenv("FRED_API_KEY")
 
-def obtener_inflacion_humana():
-    serie = fred.get_series('CPIAUCNS')
-    serie = serie.dropna()
+# Diccionario de series clave
+SERIES_ID = {
+    "inflacion": "CPIAUCNS",
+    "pib": "GDP",
+    "desempleo": "UNRATE",
+    "tasa": "FEDFUNDS",
+    "m2": "M2",
+    "pce": "PCE"
+}
 
-    ultimo_mes = serie.index[-1]
-    mes_texto = calendar.month_name[ultimo_mes.month]
-    anio = ultimo_mes.year
+def formatear_fecha(fecha_obj):
+    return fecha_obj.strftime("%Y-%m-%d")
 
-    cpi_actual = serie.iloc[-1]
-    cpi_anterior = serie.iloc[-2]
-    cpi_anio_pasado = serie.loc[serie.index[-13]]
+def detectar_serie(texto):
+    texto = texto.lower()
+    if "pib" in texto: return "pib"
+    if "desempleo" in texto or "unrate" in texto: return "desempleo"
+    if "cpi" in texto or "inflacion" in texto or "inflación" in texto: return "inflacion"
+    if "tasa" in texto or "interés" in texto or "interes" in texto: return "tasa"
+    if "m2" in texto: return "m2"
+    if "pce" in texto: return "pce"
+    return None
 
-    inflacion_mensual = round(((cpi_actual - cpi_anterior) / cpi_anterior) * 100, 2)
-    inflacion_anual = round(((cpi_actual - cpi_anio_pasado) / cpi_anio_pasado) * 100, 2)
+def obtener_fecha(texto):
+    try:
+        for palabra in texto.split():
+            try:
+                fecha = parser.parse(palabra, fuzzy=True, dayfirst=False)
+                return formatear_fecha(fecha)
+            except:
+                continue
+        return None
+    except:
+        return None
 
-    return f"""📊 El último dato del CPI fue en {mes_texto} {anio}.
-📈 Inflación mensual: {inflacion_mensual}%  
-📉 Inflación interanual: {inflacion_anual}%"""
+def obtener_dato_macro(texto):
+    tipo = detectar_serie(texto)
+    fecha = obtener_fecha(texto)
+    if not tipo:
+        return "No entendí qué dato macroeconómico quieres (¿inflación, PIB, desempleo, tasa...?)."
+    
+    serie_id = SERIES_ID.get(tipo)
+    url = f"https://api.stlouisfed.org/fred/series/observations"
+    params = {
+        "series_id": serie_id,
+        "api_key": FRED_API_KEY,
+        "file_type": "json"
+    }
+
+    if fecha:
+        params["observation_start"] = fecha
+        params["observation_end"] = fecha
+
+    respuesta = requests.get(url, params=params)
+    if respuesta.status_code != 200:
+        return "Error al consultar FRED."
+
+    datos = respuesta.json()
+    observaciones = datos.get("observations", [])
+
+    if not observaciones:
+        return f"No hay datos disponibles para esa fecha. Intenta con otra."
+
+    dato = observaciones[0]["value"]
+    fecha_dato = observaciones[0]["date"]
+
+    try:
+        valor_float = float(dato)
+        if tipo == "inflacion":
+            return f"La inflación (CPI) de EE.UU. en {fecha_dato} fue de aproximadamente {valor_float:.1f} puntos del índice base (no %)."
+        elif tipo == "pib":
+            return f"El PIB de EE.UU. en {fecha_dato} fue de {valor_float:.2f} billones de dólares (USD)."
+        elif tipo == "desempleo":
+            return f"La tasa de desempleo en {fecha_dato} fue de {valor_float:.1f}%."
+        elif tipo == "tasa":
+            return f"La tasa de interés en EE.UU. en {fecha_dato} fue de {valor_float:.2f}%."
+        elif tipo == "pce":
+            return f"El índice PCE de {fecha_dato} fue de {valor_float:.2f} puntos."
+        elif tipo == "m2":
+            return f"La oferta monetaria M2 de EE.UU. en {fecha_dato} fue de {valor_float:.2f} billones de dólares."
+        else:
+            return f"El valor de {tipo} fue {valor_float} en {fecha_dato}."
+    except:
+        return f"Dato recibido: {dato} (sin formato numérico claro)."
+
