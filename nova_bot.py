@@ -42,13 +42,13 @@ async def manejar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = update.message.text
     normalizado = normalize(texto)
 
-    # Pregunta de fecha
+    # Comando de fecha
     if "que dia es hoy" in normalizado or "fecha de hoy" in normalizado:
         hoy = datetime.now().strftime("%A, %d de %B de %Y")
         await update.message.reply_text(f"Hoy es {hoy}.")
         return
 
-    # Intención macroeconómica (usa FRED)
+    # Intento de análisis macroeconómico real
     if tiene_palabra_clave(normalizado):
         respuesta = obtener_dato_macro(texto)
         await update.message.reply_text(respuesta)
