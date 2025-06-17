@@ -1,9 +1,0 @@
-[build]
-builder = "NIXPACKS"
-nixpacksVersion = "1.38.0"
-
-[env]
-PYTHON_VERSION = "3.11"
-
-[start]
-cmd = "python3 nova_bot.py"
