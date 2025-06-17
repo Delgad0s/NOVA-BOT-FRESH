@@ -14,7 +14,7 @@ def normalize(texto):
         if unicodedata.category(c) != 'Mn'
     ).lower()
 
-# Diccionario meses
+# Diccionario de meses en español
 MESES = {
     "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
     "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
@@ -22,31 +22,32 @@ MESES = {
     "noviembre": "11", "diciembre": "12"
 }
 
+# Extrae fechas tipo "mayo 2025"
 def extraer_fecha(texto):
+    texto = normalize(texto)
     for mes_es, mes_num in MESES.items():
-        match = re.search(rf"{mes_es}\\s+(\\d{{4}})", texto)
+        match = re.search(rf"{mes_es}\s+(\d{{4}})", texto)
         if match:
             anio = match.group(1)
             return f"{anio}-{mes_num}-01"
     return None
 
+# Manejador de mensajes
 async def manejar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = update.message.text
-    normalizado = normalize(texto)
+    texto_normalizado = normalize(texto)
+    fecha_fred = extraer_fecha(texto_normalizado)
 
-    # 1. Intenta detectar y responder con un dato macroeconómico
-    respuesta_dato = obtener_dato_macro(texto)
-    if not respuesta_dato.startswith("No entendí") and not respuesta_dato.startswith("Error") and "Dato recibido" not in respuesta_dato:
-        # 2. Si se obtuvo un dato válido, genera una respuesta GPT a partir del dato
-        mensajes = [
-            {"role": "system", "content": "Eres un analista macroeconómico profesional. Usa el dato que se te proporciona para responder como si fueras ChatGPT con acceso a datos reales."},
-            {"role": "user", "content": respuesta_dato + " ¿Qué implica esto para la economía actual de EE.UU.?"}
-        ]
-        respuesta = ask_nova(mensajes)
+    # Si detectamos intención macroeconómica
+    if any(p in texto_normalizado for p in ["cpi", "inflacion", "pib", "tasa", "desempleo", "unrate", "m2", "pce"]):
+        mensaje = texto
+        if fecha_fred:
+            mensaje += f" {fecha_fred}"
+        respuesta = obtener_dato_macro(mensaje)
         await update.message.reply_text(respuesta)
         return
 
-    # 3. GPT libre si no se detectó un dato macroeconómico
+    # GPT-4o libre si no detectamos nada
     respuesta = ask_nova([{"role": "user", "content": texto}])
     await update.message.reply_text(respuesta)
 
