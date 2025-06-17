@@ -15,17 +15,24 @@ SERIES_ID = {
     "pce": "PCE"
 }
 
+# Sinónimos para cada serie
+SINONIMOS_SERIES = {
+    "inflacion": ["inflacion", "inflación", "cpi", "precio consumidor", "índice de precios"],
+    "pib": ["pib", "producto interno bruto", "gdp"],
+    "desempleo": ["desempleo", "tasa de desempleo", "unrate", "paro"],
+    "tasa": ["tasa", "interés", "interes", "federal funds", "fed funds"],
+    "m2": ["m2", "oferta monetaria"],
+    "pce": ["pce", "consumo personal"]
+}
+
 def formatear_fecha(fecha_obj):
     return fecha_obj.strftime("%Y-%m-%d")
 
 def detectar_serie(texto):
     texto = texto.lower()
-    if "pib" in texto: return "pib"
-    if "desempleo" in texto or "unrate" in texto: return "desempleo"
-    if "cpi" in texto or "inflacion" in texto or "inflación" in texto: return "inflacion"
-    if "tasa" in texto or "interés" in texto or "interes" in texto: return "tasa"
-    if "m2" in texto: return "m2"
-    if "pce" in texto: return "pce"
+    for clave, sinonimos in SINONIMOS_SERIES.items():
+        if any(palabra in texto for palabra in sinonimos):
+            return clave
     return None
 
 def obtener_fecha(texto):
@@ -45,7 +52,7 @@ def obtener_dato_macro(texto):
     fecha = obtener_fecha(texto)
     if not tipo:
         return "No entendí qué dato macroeconómico quieres (¿inflación, PIB, desempleo, tasa...?)."
-    
+
     serie_id = SERIES_ID.get(tipo)
     url = f"https://api.stlouisfed.org/fred/series/observations"
     params = {
@@ -89,4 +96,3 @@ def obtener_dato_macro(texto):
             return f"El valor de {tipo} fue {valor_float} en {fecha_dato}."
     except:
         return f"Dato recibido: {dato} (sin formato numérico claro)."
-
