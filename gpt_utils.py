@@ -1,12 +1,13 @@
-import openai
 import os
+from openai import OpenAI
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Crear cliente
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def ask_nova(messages):
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=messages,
         temperature=0.3
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
