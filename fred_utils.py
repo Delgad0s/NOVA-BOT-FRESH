@@ -15,24 +15,20 @@ SERIES_ID = {
     "pce": "PCE"
 }
 
-# Sinónimos para cada serie
-SINONIMOS_SERIES = {
-    "inflacion": ["inflacion", "inflación", "cpi", "precio consumidor", "índice de precios"],
-    "pib": ["pib", "producto interno bruto", "gdp"],
-    "desempleo": ["desempleo", "tasa de desempleo", "unrate", "paro"],
-    "tasa": ["tasa", "interés", "interes", "federal funds", "fed funds"],
-    "m2": ["m2", "oferta monetaria"],
-    "pce": ["pce", "consumo personal"]
-}
-
 def formatear_fecha(fecha_obj):
     return fecha_obj.strftime("%Y-%m-%d")
 
+def obtener_fecha_actual():
+    return datetime.today().strftime("%Y-%m-%d")
+
 def detectar_serie(texto):
     texto = texto.lower()
-    for clave, sinonimos in SINONIMOS_SERIES.items():
-        if any(palabra in texto for palabra in sinonimos):
-            return clave
+    if "pib" in texto: return "pib"
+    if "desempleo" in texto or "unrate" in texto: return "desempleo"
+    if "cpi" in texto or "inflacion" in texto or "inflación" in texto: return "inflacion"
+    if "tasa" in texto or "interés" in texto or "interes" in texto: return "tasa"
+    if "m2" in texto: return "m2"
+    if "pce" in texto: return "pce"
     return None
 
 def obtener_fecha(texto):
@@ -81,18 +77,45 @@ def obtener_dato_macro(texto):
     try:
         valor_float = float(dato)
         if tipo == "inflacion":
-            return f"La inflación (CPI) de EE.UU. en {fecha_dato} fue de aproximadamente {valor_float:.1f} puntos del índice base (no %)."
+            return f"📊 La inflación (CPI) de EE.UU. en {fecha_dato} fue de aproximadamente {valor_float:.1f} puntos del índice base (no %)."
         elif tipo == "pib":
-            return f"El PIB de EE.UU. en {fecha_dato} fue de {valor_float:.2f} billones de dólares (USD)."
+            return f"📈 El PIB de EE.UU. en {fecha_dato} fue de {valor_float:.2f} billones de dólares (USD)."
         elif tipo == "desempleo":
-            return f"La tasa de desempleo en {fecha_dato} fue de {valor_float:.1f}%."
+            return f"📉 La tasa de desempleo en {fecha_dato} fue de {valor_float:.1f}%."
         elif tipo == "tasa":
-            return f"La tasa de interés en EE.UU. en {fecha_dato} fue de {valor_float:.2f}%."
+            return f"💰 La tasa de interés en EE.UU. en {fecha_dato} fue de {valor_float:.2f}%."
         elif tipo == "pce":
-            return f"El índice PCE de {fecha_dato} fue de {valor_float:.2f} puntos."
+            return f"📦 El índice PCE de {fecha_dato} fue de {valor_float:.2f} puntos."
         elif tipo == "m2":
-            return f"La oferta monetaria M2 de EE.UU. en {fecha_dato} fue de {valor_float:.2f} billones de dólares."
+            return f"💵 La oferta monetaria M2 de EE.UU. en {fecha_dato} fue de {valor_float:.2f} billones de dólares."
         else:
-            return f"El valor de {tipo} fue {valor_float} en {fecha_dato}."
+            return f"ℹ️ El valor de {tipo} fue {valor_float} en {fecha_dato}."
     except:
-        return f"Dato recibido: {dato} (sin formato numérico claro)."
+        return f"❓ Dato recibido: {dato} (sin formato numérico claro)."
+
+def obtener_ultimos_datos_macro():
+    resultados = []
+    series = {
+        "PIB real trimestral (GDPC1)": "GDPC1",
+        "Tasa de desempleo (UNRATE)": "UNRATE",
+        "Inflación (CPI) (CPIAUCSL)": "CPIAUCSL",
+        "Tasa de interés (FEDFUNDS)": "FEDFUNDS",
+        "Tasa hipotecaria 30 años (MORTGAGE30US)": "MORTGAGE30US"
+    }
+    for nombre, serie_id in series.items():
+        url = f"https://api.stlouisfed.org/fred/series/observations"
+        params = {
+            "series_id": serie_id,
+            "api_key": FRED_API_KEY,
+            "file_type": "json"
+        }
+        r = requests.get(url, params=params)
+        data = r.json()
+        obs = data.get("observations", [])
+        if obs:
+            valor = float(obs[-1]["value"])
+            redondeado = round(valor, 2) if redondeado != "." else valor
+            resultados.append(f"✅ {nombre}: {redondeado}")
+        else:
+            resultados.append(f"❌ {nombre}: no disponible")
+    return "📊 Últimos datos macroeconómicos relevantes:\n" + "\n".join(resultados)
