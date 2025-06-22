@@ -1,43 +1,34 @@
 import os
-import logging
-from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
-    MessageHandler,
-    filters
-)
-from gpt_utils import ask_nova  # Usa GPT-4o con análisis institucional
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from gpt_utils import ask_nova
+from dotenv import load_dotenv
 
-# Cargar variables de entorno
 load_dotenv()
+
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Configurar logs
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+if not TELEGRAM_BOT_TOKEN:
+    raise ValueError("❌ No se encontró TELEGRAM_BOT_TOKEN en las variables de entorno.")
 
-# Handler principal
+application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+# 👇 Manejador de mensajes
+@application.message()
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_input = update.message.text
-    messages = [{"role": "user", "content": user_input}]
-    
     try:
-        # CORRECCIÓN: Await obligatorio
-        reply = await ask_nova(messages)
-        await update.message.reply_text(reply)
+        texto = update.message.text
+        print(f"[🟡 MENSAJE RECIBIDO] {texto}")
+        
+        respuesta = ask_nova([{"role": "user", "content": texto}])
+        
+        print(f"[🟢 RESPUESTA ENVIADA] {respuesta}")
+        await update.message.reply_text(respuesta)
     except Exception as e:
-        logging.error(f"Error al generar respuesta con GPT-4o: {e}")
-        await update.message.reply_text("Hubo un error procesando tu solicitud.")
+        print(f"[❌ ERROR EN EL MANEJO DE MENSAJE] {e}")
+        await update.message.reply_text(f"❌ Error interno: {e}")
 
-# Inicializar bot
-def main():
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
-
+# 👇 Iniciar bot
 if __name__ == "__main__":
-    main()
+    print("🚀 NOVA iniciando...")
+    application.run_polling()
