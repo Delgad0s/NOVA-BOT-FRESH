@@ -1,15 +1,32 @@
 import os
+import requests
 from dotenv import load_dotenv
-from fredapi import Fred
 
-# Cargar API key
+# Cargar API KEY
 load_dotenv()
-fred = Fred(api_key=os.getenv("FRED_API_KEY"))
+api_key = os.getenv("FRED_API_KEY")
 
-# Obtener último dato del CPI
-cpi = fred.get_series_latest_release('CPIAUCSL')
-ultimo_valor = round(cpi.iloc[-1], 3)
-fecha = cpi.index[-1].strftime('%Y-%m')
+# Fecha objetivo: Mayo 2025
+fecha_objetivo = "2025-05-01"
 
-print(f"Último CPI (CPIAUCSL): {ultimo_valor} — Fecha: {fecha}")
+# Llamada a FRED
+url = f"https://api.stlouisfed.org/fred/series/observations?series_id=CPIAUCSL&api_key={api_key}&file_type=json"
+
+response = requests.get(url)
+data = response.json()
+
+# Validación de conexión y búsqueda
+if "observations" not in data:
+    print("❌ ERROR: No se encontró el campo 'observations'.")
+    print(data)
+else:
+    encontrado = False
+    for obs in data["observations"]:
+        if obs["date"] == fecha_objetivo:
+            print(f"✅ CPI para {fecha_objetivo}: {obs['value']}%")
+            encontrado = True
+            break
+
+    if not encontrado:
+        print(f"⚠️ No se encontró el CPI para la fecha {fecha_objetivo}.")
 
