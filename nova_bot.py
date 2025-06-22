@@ -13,8 +13,7 @@ if not TELEGRAM_BOT_TOKEN:
 
 application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-# 👇 Manejador de mensajes
-@application.message()
+# 👇 Manejador de mensajes (NO uses decoradores con application)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         texto = update.message.text
@@ -28,7 +27,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"[❌ ERROR EN EL MANEJO DE MENSAJE] {e}")
         await update.message.reply_text(f"❌ Error interno: {e}")
 
-# 👇 Iniciar bot
+# 👇 Agrega el handler correctamente
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+# 👇 Inicia el bot
 if __name__ == "__main__":
     print("🚀 NOVA iniciando...")
     application.run_polling()
