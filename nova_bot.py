@@ -8,32 +8,32 @@ from telegram.ext import (
     MessageHandler,
     filters
 )
-
-from gpt_utils import ask_nova  # <-- Importa tu función GPT-4o
+from gpt_utils import ask_nova  # Usa GPT-4o con análisis institucional
 
 # Cargar variables de entorno
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Configurar logging (opcional pero útil)
+# Configurar logs
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
-# Handler para mensajes de texto
+# Handler principal
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text
     messages = [{"role": "user", "content": user_input}]
     
     try:
-        reply = ask_nova(messages)
+        # CORRECCIÓN: Await obligatorio
+        reply = await ask_nova(messages)
         await update.message.reply_text(reply)
     except Exception as e:
         logging.error(f"Error al generar respuesta con GPT-4o: {e}")
         await update.message.reply_text("Hubo un error procesando tu solicitud.")
 
-# Construir la aplicación del bot
+# Inicializar bot
 def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -41,4 +41,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
